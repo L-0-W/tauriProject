@@ -1,58 +1,14 @@
+@import "tailwindcss";
+
+
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
+  
 }
 
 body, html, #root, #app {
   width: 100vw;
   height: 100vh;
-  background: transparent; /* ou qualquer cor de fundo que você queira */
-  color: white;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
-}
-
-input {
-  width: 100vw;
-  height: 100vh;
-  background: white;
-  border-radius: 10px;
-  padding: 10px;
-}
-
-input:focus {
-  outline: none;
-}
-
-.container {
-  display: flex;
-  flex-direction: column;
-}
-
-.sokol-container {
-  position: relative;
-  width: 100%;
-  height: 100vh; /* Ajuste conforme sua necessidade */
-  overflow: hidden;
-}
-
-.game {
-  position: absolute;
-  top: 0;
-  left: 0;
-  margin: 0;
-  border: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  display: block;
-  image-rendering: optimizeSpeed;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: -o-crisp-edges;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: optimize-contrast;
-  image-rendering: crisp-edges;
-  image-rendering: pixelated;
-  -ms-interpolation-mode: nearest-neighbor;
 }

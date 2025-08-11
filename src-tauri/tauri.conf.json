@@ -12,14 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "tauri-app",
-        "width": 600,
-        "height": 2,
+        "fullscreen": true,
         "decorations": false,
         "transparent": true,
         "resizable": false,
         "shadow": false,
-        "center": true,
         "visible": false, 
         "skipTaskbar": true,
         "additionalBrowserArgs": "--enable-unsafe-webgpu"

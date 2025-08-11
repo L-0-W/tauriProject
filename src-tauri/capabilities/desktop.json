@@ -10,6 +10,7 @@
   ],
   "permissions": [
     "global-shortcut:default",
-    "core:window:allow-hide"
+    "core:window:allow-hide",
+    "core:webview:allow-webview-hide"
   ]
 }

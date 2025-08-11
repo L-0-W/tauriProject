@@ -1,15 +1,17 @@
 use tauri::{
+  Emitter,
   menu::{Menu, MenuItem},
   tray::{TrayIconBuilder},
   Manager,
-  Position
+  Position,
 };
 
+
+mod system_space;
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use std::process::Command;
 
 use windows::{
    Win32::UI::WindowsAndMessaging::*,
@@ -23,17 +25,7 @@ struct WindowsCount {
 struct MouseTrackerState {
     running: Arc<AtomicBool>,
 }
- 
- 
-#[tauri::command]
-fn iniciate_game(_app: tauri::AppHandle) {
-  tauri::async_runtime::spawn(async move {
-     let _output = Command::new("../src-zig/zig-out/bin/hello.exe")
-      .output()
-      .expect("não foi pssoveil executar arquivo");  
-  });
-}
-
+  
 #[tauri::command(rename_all = "snake_case")]
 fn start_moving_window(app: tauri::AppHandle, state: tauri::State<'_, MouseTrackerState>, x: i32, y: i32, window_name: String) {
  
@@ -89,7 +81,7 @@ async fn open_new_window(app: tauri::AppHandle, windows_count: tauri::State<'_, 
   let webview_url = tauri::WebviewUrl::App(format!("/{}", window_name).into());
   
   {
-    tauri::WebviewWindowBuilder::new(
+    let window = tauri::WebviewWindowBuilder::new(
       &app,
       format!("{}-{}", window_name, windows_count),
       webview_url.clone(),
@@ -104,6 +96,12 @@ async fn open_new_window(app: tauri::AppHandle, windows_count: tauri::State<'_, 
     .additional_browser_args("--enable-unsafe-webgpu") 
     .build()
     .expect("Falha ao criar janela de configuração");
+    
+      
+    #[cfg(desktop)]
+    use window_vibrancy::{apply_acrylic};
+    apply_acrylic(&window, Some((18, 18, 18, 120))).expect("Unsupported platform! 'apply_blur' is only supported on Windows");
+  
   }
   
   *windows_count+=1;
@@ -119,11 +117,19 @@ fn main() {
     .manage(WindowsCount {
       count: Mutex::new(0),
     })
-    .invoke_handler(tauri::generate_handler![open_new_window, start_moving_window, stop_moving_window, iniciate_game])
     .setup(|app| {
     
       #[cfg(desktop)]
       {
+      
+
+        {  
+           if let Some(window) = app.get_webview_window("search"){
+              use window_vibrancy::{apply_acrylic};
+              apply_acrylic(&window, Some((23, 23, 23, 200))).expect("Unsupported platform! 'apply_blur' is only supported on Windows");
+           }
+        }
+
       
       use tauri_plugin_global_shortcut::{
         Code, 
@@ -133,13 +139,14 @@ fn main() {
         ShortcutState
       };
       
-      let ctrl_n_shortcut = Shortcut::new(Some(Modifiers::CONTROL), Code::KeyN);
       
+      let ctrl_n_shortcut = Shortcut::new(Some(Modifiers::CONTROL), Code::KeyN);
+
       let quit_i = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
       let menu = Menu::with_items(app, &[&quit_i])?; 
 
       
-      // CASO ESTIVER MOVENDO E CLICLAR  'ctrl_n' FIXAR O APP NO LOCAL
+      // CASO ESTIVER MOVENDO E CLwICLAR  'ctrl_n' FIXAR O APP NO LOCAL
 
 
       app.handle().plugin(
@@ -147,6 +154,18 @@ fn main() {
           .with_handler(move |_app, shortcut, event| {
           println!("{:?}", shortcut);
           
+          
+          
+          if let Some(window) = _app.get_webview_window("main"){
+            let is_focus = window.is_focused().unwrap_or(false);
+            
+            if !is_focus {
+              window.hide().unwrap();
+            }
+          }
+          
+          
+
           if shortcut == &ctrl_n_shortcut {
             match event.state() {
               ShortcutState::Pressed => {
@@ -158,8 +177,11 @@ fn main() {
                   println!("Ctrl-N Released!");        
               }
             }
-          } else if shortcut == &ctrl_n_shortcut &&  running.load
+          } 
           
+          //else if shortcut == &ctrl_n_shortcut &&  running.load {
+          
+         
         })
         .build(),
       )?;
@@ -186,29 +208,42 @@ fn main() {
 
       Ok(())
     })
+    .invoke_handler(tauri::generate_handler![open_new_window, start_moving_window, stop_moving_window, hide_window])
     .run(tauri::generate_context!())
     .expect("Erro ao iniciar o app Tauri");
+    
+    
 }
 
 
-fn toggle_window(app: &tauri::AppHandle, action: String ) {
-  
-  
+#[tauri::command]
+fn hide_window(app: tauri::AppHandle) {
   if let Some(window) = app.get_webview_window("main") {
-    
-    // if action == "close" { window.hide().unwrap() }
+    window.hide().unwrap();
+  }
+}
 
-  
+fn toggle_window(app: &tauri::AppHandle, action: String ) {
+
+  if let Some(window) = app.get_webview_window("main") {
+   // if action == "close" { window.hide().unwrap() }
+
     if action != "toggle" {return;}
       
-    
+
+   let is_visible = window.is_visible().unwrap_or(false);
   
-    let is_visible = window.is_visible().unwrap_or(false);
-     
+   
     if is_visible {
       window.hide().unwrap();
     } else {
+      app.emit("window_is_visible", true).unwrap();
+      
+      let infos: system_space::INFO = system_space::get_spaces();
+      app.emit("update_total_space", infos.total_space).unwrap();
+      
       window.show().unwrap();
+      window.set_fullscreen(true).unwrap();
       window.set_focus().unwrap();
       window.center().unwrap();
     }
